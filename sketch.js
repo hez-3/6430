@@ -34,7 +34,7 @@ let maxSentiment = 1.0;
 let chatBoxWidth; // Will be set as a percentage of screen width
 let paddingX = 50; // Padding from the LEFT
 let paddingTop = 50; // Padding from the TOP (for title)
-let paddingBottom = 90; // Padding from the BOTTOM (Set this to move UI up/down)
+let paddingBottom = 30; // Padding from the BOTTOM (Set this to move UI up/down)
 let textFontSize = 16;
 // ... (rest of variables)
 let inputHeight = 50; // Height for the new input box and buttons
