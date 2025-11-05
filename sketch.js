@@ -3,11 +3,12 @@
  * This code uses ml5.faceMesh to detect a simple facial expression of smile or frown. 
  * This is then feed into a mock chat interface and the messages will be positive or negitive based on the uses facial expression
  *
+ * --- MODIFIED with centered, "cover" video background ---
  */
 
 // --- ml5 face detection settings---
 let faceMesh;
-let video;
+let video; // This is our webcam capture
 let faces = [];
 let options = { maxFaces: 1, refineLandmarks: true, flipHorizontal: false };
 
@@ -31,14 +32,14 @@ let maxSentiment = 1.0;
 
 // --- Visual Settings (Modified for Left Side) ---
 let chatBoxWidth; // Will be set as a percentage of screen width
-let paddingX = 50;        // Padding from the LEFT
-let paddingTop = 50;      // Padding from the TOP (for title)
-let paddingBottom = 90;   // Padding from the BOTTOM (Set this to move UI up/down)
+let paddingX = 50; // Padding from the LEFT
+let paddingTop = 50; // Padding from the TOP (for title)
+let paddingBottom = 90; // Padding from the BOTTOM (Set this to move UI up/down)
 let textFontSize = 16;
 // ... (rest of variables)
 let inputHeight = 50; // Height for the new input box and buttons
 let messageBoxHeight = 40; // This is the new box height
-let messageBoxMargin = 2;  // This is the new gap
+let messageBoxMargin = 2; // This is the new gap
 
 function setup() {
   // Create a canvas that fills the entire browser window
@@ -46,9 +47,9 @@ function setup() {
 
   // --- Face detection ---
   video = createCapture(VIDEO);
-  video.size(width, height);
+  // video.size(width, height); // <-- REMOVED THIS LINE
   video.hide();
-  
+
   // --- Initialize faceMesh ---
   // We pass the video, options, and a callback function
   faceMesh = ml5.faceMesh(video, options, modelReady);
@@ -65,11 +66,11 @@ function setup() {
   // --- Create and Style Input Box ---
   input = createInput();
   input.attribute('placeholder', 'comments...');
-  
+
   // --- Create Buttons ---
   smileButton = createButton('☺'); // Simple smiley
-  sendButton = createButton('⌲');  // Simple plane
-  heartButton = createButton('♡');  // Outline heart
+  sendButton = createButton('⌲'); // Simple plane
+  heartButton = createButton('♡'); // Outline heart
   // NOTE: positionBottomUI() is called in modelReady()
 
   // Filter the list for the first time
@@ -82,18 +83,45 @@ function setup() {
 // This new callback function runs *only* when the model is loaded
 function modelReady() {
   console.log("FaceMesh Model Ready!");
-  
+
   // Now that the model is ready, we can position the UI
   positionBottomUI();
-  
+
   // And now we can start detecting faces
   faceMesh.detectStart(video, gotFaces);
 }
 
 function draw() {
-  // Draw the webcam video (this will show right away)
-  image(video, 0, 0, width, height);
   
+  // --- NEW: Centered & Cropped Video Background ---
+  // We must wait for the video to start loading
+  if (video.width > 0) {
+    let canvasAspect = width / height;
+    let videoAspect = video.width / video.height;
+    let dWidth, dHeight, dx, dy;
+
+    if (videoAspect > canvasAspect) {
+      // Video is WIDER than canvas
+      dHeight = height;
+      dWidth = dHeight * videoAspect;
+      dy = 0;
+      dx = (width - dWidth) / 2;
+    } else {
+      // Video is TALLER than canvas
+      dWidth = width;
+      dHeight = dWidth / videoAspect;
+      dx = 0;
+      dy = (height - dHeight) / 2;
+    }
+    // Draw the video with the calculated position and dimensions
+    image(video, dx, dy, dWidth, dHeight);
+    
+  } else {
+    // Before video loads, just draw a black background
+    background(0);
+  }
+  // --- END of new video logic ---
+
   // add username to top of page
   // Draw the user name at the top
   push(); // Save current drawing style
@@ -102,7 +130,7 @@ function draw() {
   textSize(32); // Large font size (you can change 32)
   textAlign(LEFT, TOP);
   // Use chatPadding for consistent spacing from the top
-  text("👤 Username", paddingX, paddingTop);  
+  text("👤 Username", paddingX, paddingTop);
   pop(); // Restore previous drawing style
 
   // --- Face Tracking Loop ---
@@ -114,7 +142,7 @@ function draw() {
     let horzMidY = (face.keypoints[78].y + face.keypoints[308].y) / 2;
     let vertMidX = (face.keypoints[13].x + face.keypoints[14].x) / 2;
     let vertMidY = (face.keypoints[13].y + face.keypoints[14].y) / 2;
-    
+
     // detect smile or frown by comparing mid points
     let expressionIndex = vertMidY - horzMidY;
 
@@ -131,15 +159,15 @@ function draw() {
     minSentiment = -expressionIndex - 0.1;
     maxSentiment = -expressionIndex + 0.1;
   }
-  
+
   // --- Chat Logic ---
-  
+
   // 1. Update the filtered list every frame
   updateFilteredList(); // <-- MOVED HERE
-  
+
   // 2. Draw the messages
   drawMessages();
-    
+
   // 3. Check if it's time to post a new message
   if (millis() > nextMessageTime) {
     postNewMessage();
@@ -174,9 +202,9 @@ function updateFilteredList() {
     );
 
     // Log to the console so you know it worked
-    console.log(
-      `${filteredList.length} messages available.`
-    );
+    // console.log(
+    //   `${filteredList.length} messages available.`
+    // );
   }
 }
 
@@ -221,7 +249,7 @@ function drawMessages() {
     // USE NEW PADDING VARIABLES HERE
     text(
       "👤 " + msg.text,
-      paddingX, 
+      paddingX,
       y, // y is the TOP of the message box
       chatBoxWidth - paddingX * 2, // Max width
       messageBoxHeight // Constrain text to this height
@@ -244,7 +272,7 @@ function drawMessages() {
 function styleButton(button, x, y, size) {
   button.position(x, y);
   button.size(size, size);
-  
+
   // Apply CSS Styles
   button.style('background-color', 'transparent');
   button.style('border', 'none'); // <-- CHANGED THIS
@@ -252,7 +280,7 @@ function styleButton(button, x, y, size) {
   button.style('font-size', (size * 0.5) + 'px'); // Scale emoji size
   // button.style('border-radius', '50%'); // <-- REMOVED THIS
   button.style('padding', '0');
-  
+
   // These help center the emoji inside the circle
   button.style('display', 'flex');
   button.style('align-items', 'center');
@@ -264,8 +292,8 @@ function positionBottomUI() {
   let boxY = height - inputHeight - paddingBottom;
   let inputX = paddingX;
   // Input box takes 2/3 of the width, minus its own padding
-  let inputWidth = (width * (2/3)) - paddingX;
-  
+  let inputWidth = (width * (2 / 3)) - paddingX;
+
   // Position and style the input box
   input.position(inputX, boxY);
   input.size(inputWidth, inputHeight);
@@ -279,14 +307,14 @@ function positionBottomUI() {
 
   // --- Position Buttons ---
   let buttonSize = inputHeight;
-  
+
   // Calculate the area available for buttons
   let buttonAreaX = inputX + inputWidth;
   let buttonAreaWidth = width - buttonAreaX;
-  
+
   // We will have 4 gaps: [gap] [btn] [gap] [btn] [gap] [btn] [gap]
   let gapSize = (buttonAreaWidth - (3 * buttonSize)) / 4;
-  
+
   // Calculate X position for each button
   let button1_X = buttonAreaX + gapSize;
   let button2_X = button1_X + buttonSize + gapSize;
@@ -310,11 +338,11 @@ function windowResized() {
   // Resize the canvas to the new window dimensions
   resizeCanvas(windowWidth, windowHeight);
   // Resize the video capture to match
-  video.size(width, height);
+  // video.size(width, height); // <-- REMOVED THIS LINE
 
   // Recalculate chat box width
   chatBoxWidth = width * 0.85;
-  
+
   // Reposition the UI (it's safe to call this)
   positionBottomUI();
 }
